@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
-import { StorageManager } from '../lib/storage';
+import { SupabaseStorage } from '../lib/supabaseStorage';
 import { Participant } from '../types';
 
 interface RecoveryProps {
@@ -13,6 +13,7 @@ export function Recovery({ sessionId, onBack }: RecoveryProps) {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [error, setError] = useState('');
   const [recovered, setRecovered] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
@@ -20,20 +21,29 @@ export function Recovery({ sessionId, onBack }: RecoveryProps) {
     }
   }, [sessionId]);
 
-  const handleRecover = (id: string) => {
+  const handleRecover = async (id: string) => {
     setError('');
-    const found = StorageManager.getParticipantBySessionId(id);
+    setLoading(true);
 
-    if (found) {
-      setParticipant(found);
-      StorageManager.setCurrentParticipant(found);
-      setRecovered(true);
+    try {
+      const found = await SupabaseStorage.getParticipantBySessionId(id);
 
-      setTimeout(() => {
-        window.location.href = '/participant';
-      }, 2000);
-    } else {
-      setError('Nie znaleziono sesji o podanym ID. Sprawdź poprawność ID i spróbuj ponownie.');
+      if (found) {
+        setParticipant(found);
+        SupabaseStorage.setCurrentParticipant(found);
+        setRecovered(true);
+
+        setTimeout(() => {
+          window.location.href = '/participant';
+        }, 2000);
+      } else {
+        setError('Nie znaleziono sesji o podanym ID. Sprawdź poprawność ID i spróbuj ponownie.');
+      }
+    } catch (error) {
+      console.error('Error recovering session:', error);
+      setError('Błąd podczas odzyskiwania sesji. Sprawdź połączenie z internetem.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,6 +102,7 @@ export function Recovery({ sessionId, onBack }: RecoveryProps) {
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm"
                   placeholder="np. 123e4567-e89b-12d3-a456-426614174000"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -104,9 +115,10 @@ export function Recovery({ sessionId, onBack }: RecoveryProps) {
 
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Odzyskaj Sesję
+                {loading ? 'Odzyskiwanie...' : 'Odzyskaj Sesję'}
               </button>
             </form>
 

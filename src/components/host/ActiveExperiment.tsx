@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, MessageSquare } from 'lucide-react';
-import { StorageManager } from '../../lib/storage';
+import { SupabaseStorage } from '../../lib/supabaseStorage';
 import { ChatRoom, Participant, ChatMessage, ExperimentType } from '../../types';
 
 interface ActiveExperimentProps {
@@ -12,15 +12,33 @@ interface ActiveExperimentProps {
 export function ActiveExperiment({ experimentId, experimentType, refreshKey }: ActiveExperimentProps) {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<Record<string, Participant>>({});
 
   useEffect(() => {
-    const loadRooms = () => {
-      const loaded = StorageManager.getChatRoomsByExperiment(experimentId);
-      setRooms(loaded);
+    const loadRooms = async () => {
+      try {
+        const loaded = await SupabaseStorage.getChatRoomsByExperiment(experimentId);
+        setRooms(loaded);
+
+        const participantIds = new Set<string>();
+        loaded.forEach(room => {
+          participantIds.add(room.sellerId);
+          participantIds.add(room.buyerId);
+        });
+
+        const participantsMap: Record<string, Participant> = {};
+        for (const id of participantIds) {
+          const p = await SupabaseStorage.getParticipant(id);
+          if (p) participantsMap[id] = p;
+        }
+        setParticipants(participantsMap);
+      } catch (error) {
+        console.error('Error loading rooms:', error);
+      }
     };
 
     loadRooms();
-    const interval = setInterval(loadRooms, 1000);
+    const interval = setInterval(loadRooms, 2000);
 
     return () => clearInterval(interval);
   }, [experimentId, refreshKey]);
@@ -67,75 +85,81 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
           Pokoje Czatowe ({rooms.length})
         </h2>
 
-        <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-          {rooms.map((room, index) => {
-            const seller = StorageManager.getParticipant(room.sellerId);
-            const buyer = StorageManager.getParticipant(room.buyerId);
+        {rooms.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            Brak aktywnych pokoi
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
+            {rooms.map((room, index) => {
+              const seller = participants[room.sellerId];
+              const buyer = participants[room.buyerId];
 
-            return (
-              <div
-                key={room.id}
-                onClick={() => setSelectedRoom(room.id)}
-                className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                  selectedRoom === room.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-bold text-slate-800">Pokój {index + 1}</h3>
-                    <p className="text-sm text-slate-600">Wariant {room.variant}</p>
+              return (
+                <div
+                  key={room.id}
+                  onClick={() => setSelectedRoom(room.id)}
+                  className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                    selectedRoom === room.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-bold text-slate-800">Pokój {index + 1}</h3>
+                      <p className="text-sm text-slate-600">Wariant {room.variant}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(room.status)}`}>
+                        {getStatusText(room.status)}
+                      </span>
+                      {room.status === 'active' && (
+                        <div className="flex items-center gap-1 text-slate-600">
+                          <Clock className="w-4 h-4" />
+                          <span className="text-sm font-mono">{getTimeRemaining(room)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(room.status)}`}>
-                      {getStatusText(room.status)}
-                    </span>
-                    {room.status === 'active' && (
-                      <div className="flex items-center gap-1 text-slate-600">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm font-mono">{getTimeRemaining(room)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-slate-500 mb-1">Sprzedający</p>
-                    <p className="font-semibold text-slate-800">
-                      {seller ? `${seller.firstName} ${seller.lastName}` : 'N/A'}
-                    </p>
-                    {seller?.declaredPrice && (
-                      <p className="text-xs text-slate-600">
-                        Min: {seller.declaredPrice.toFixed(2)} zł
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500 mb-1">Sprzedający</p>
+                      <p className="font-semibold text-slate-800">
+                        {seller ? `${seller.firstName} ${seller.lastName}` : 'Ładowanie...'}
                       </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-slate-500 mb-1">Kupujący</p>
-                    <p className="font-semibold text-slate-800">
-                      {buyer ? `${buyer.firstName} ${buyer.lastName}` : 'N/A'}
-                    </p>
-                    {buyer?.declaredPrice && (
-                      <p className="text-xs text-slate-600">
-                        Max: {buyer.declaredPrice.toFixed(2)} zł
+                      {seller?.declaredPrice && (
+                        <p className="text-xs text-slate-600">
+                          Min: {seller.declaredPrice.toFixed(2)} zł
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-slate-500 mb-1">Kupujący</p>
+                      <p className="font-semibold text-slate-800">
+                        {buyer ? `${buyer.firstName} ${buyer.lastName}` : 'Ładowanie...'}
                       </p>
-                    )}
+                      {buyer?.declaredPrice && (
+                        <p className="text-xs text-slate-600">
+                          Max: {buyer.declaredPrice.toFixed(2)} zł
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {room.status === 'completed' && seller?.finalPrice && (
-                  <div className="mt-3 pt-3 border-t border-slate-200">
-                    <p className="text-sm text-green-600 font-semibold">
-                      Cena finalna: {seller.finalPrice.toFixed(2)} zł
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  {room.status === 'completed' && seller?.finalPrice && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-sm text-green-600 font-semibold">
+                        Cena finalna: {seller.finalPrice.toFixed(2)} zł
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -168,34 +192,37 @@ interface ChatViewerProps {
 
 function ChatViewer({ roomId, experimentType, refreshKey }: ChatViewerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [participants, setParticipants] = useState<Record<string, Participant>>({});
 
   useEffect(() => {
-    const loadMessages = () => {
-      const loaded = StorageManager.getMessagesByRoom(roomId);
-      setMessages(loaded);
-    };
+    const loadMessages = async () => {
+      try {
+        const loaded = await SupabaseStorage.getMessagesByRoom(roomId);
+        setMessages(loaded);
 
-    loadMessages();
+        const participantIds = new Set<string>();
+        loaded.forEach(msg => participantIds.add(msg.participantId));
 
-    const messageHandler = (e: Event) => {
-      const customEvent = e as CustomEvent<ChatMessage>;
-      if (customEvent.detail.roomId === roomId) {
-        loadMessages();
+        const participantsMap: Record<string, Participant> = {};
+        for (const id of participantIds) {
+          const p = await SupabaseStorage.getParticipant(id);
+          if (p) participantsMap[id] = p;
+        }
+        setParticipants(participantsMap);
+      } catch (error) {
+        console.error('Error loading messages:', error);
       }
     };
 
-    window.addEventListener('chatMessage', messageHandler);
+    loadMessages();
     const interval = setInterval(loadMessages, 2000);
 
-    return () => {
-      window.removeEventListener('chatMessage', messageHandler);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [roomId, refreshKey]);
 
   const getSenderName = (participantId: string) => {
-    const participant = StorageManager.getParticipant(participantId);
-    if (!participant) return 'Unknown';
+    const participant = participants[participantId];
+    if (!participant) return 'Ładowanie...';
 
     if (experimentType === 1) {
       return participant.role === 'seller' ? 'Sprzedający' : 'Kupujący';
