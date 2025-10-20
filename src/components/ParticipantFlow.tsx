@@ -17,6 +17,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
   const [participant, setParticipant] = useState<Participant | null>(
     StorageManager.getCurrentParticipant()
   );
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,6 +26,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
         const updated = StorageManager.getParticipant(current.id);
         if (updated) {
           setParticipant(updated);
+          setCurrentPage(updated.currentPage);
           StorageManager.setCurrentParticipant(updated);
         }
       }
@@ -39,22 +41,44 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
     const updated = { ...participant, ...updates };
     StorageManager.saveParticipant(updated);
     setParticipant(updated);
+    setCurrentPage(updated.currentPage);
     StorageManager.setCurrentParticipant(updated);
   };
 
-  const handleNextPage = () => {
-    if (participant) {
-      handleUpdateParticipant({ currentPage: participant.currentPage + 1 });
-    }
+  const handleGoToRegistration = () => {
+    setCurrentPage(2);
   };
 
   if (!participant) {
-    return <Page1Welcome onNext={handleNextPage} />;
+    if (currentPage === 1) {
+      return <Page1Welcome onNext={handleGoToRegistration} />;
+    } else {
+      return (
+        <Page2Registration
+          onRegister={(data) => {
+            const newParticipant: Participant = {
+              id: StorageManager.generateId(),
+              sessionId: StorageManager.generateId(),
+              experimentId: 'current',
+              firstName: data.firstName,
+              lastName: data.lastName,
+              currentPage: 3,
+              consentGiven: data.consent,
+              createdAt: new Date().toISOString()
+            };
+            StorageManager.saveParticipant(newParticipant);
+            setParticipant(newParticipant);
+            setCurrentPage(3);
+            StorageManager.setCurrentParticipant(newParticipant);
+          }}
+        />
+      );
+    }
   }
 
   switch (participant.currentPage) {
     case 1:
-      return <Page1Welcome onNext={handleNextPage} />;
+      return <Page1Welcome onNext={handleGoToRegistration} />;
     case 2:
       return (
         <Page2Registration
