@@ -12,18 +12,18 @@ function App() {
   const [recoverySessionId, setRecoverySessionId] = useState<string>('');
 
   useEffect(() => {
-    const path = window.location.pathname;
+    const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(window.location.search);
 
-    if (path === '/host') {
+    if (hash === '/host') {
       setView('host');
-    } else if (path === '/recovery') {
+    } else if (hash === '/recovery') {
       const sessionId = params.get('id');
       if (sessionId) {
         setRecoverySessionId(sessionId);
         setView('recovery');
       }
-    } else if (path === '/participant') {
+    } else if (hash === '/participant') {
       const current = SupabaseStorage.getCurrentParticipant();
       if (current) {
         setView('participant');
@@ -33,17 +33,17 @@ function App() {
 
   const handleStartParticipant = () => {
     setView('participant');
-    window.history.pushState({}, '', '/participant');
+    window.location.hash = '#/participant';
   };
 
   const handleStartHost = () => {
     setView('host');
-    window.history.pushState({}, '', '/host');
+    window.location.hash = '#/host';
   };
 
   const handleBackToHome = () => {
     setView('home');
-    window.history.pushState({}, '', '/');
+    window.location.hash = '#/';
     SupabaseStorage.clearCurrentParticipant();
   };
 
