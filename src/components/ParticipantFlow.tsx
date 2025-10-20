@@ -122,8 +122,12 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
       return (
         <Page4Instructions
           participant={participant}
-          onNext={(declaredPrice) => {
-            handleUpdateParticipant({ declaredPrice, currentPage: 5 });
+          onNext={async (declaredPrice) => {
+            await handleUpdateParticipant({
+              declaredPrice,
+              instructionsRead: true,
+              currentPage: 5
+            });
           }}
         />
       );

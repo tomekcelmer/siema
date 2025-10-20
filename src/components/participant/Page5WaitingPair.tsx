@@ -32,11 +32,11 @@ export function Page5WaitingPair({ participant }: Page5WaitingPairProps) {
 
       const { data: partner } = await SupabaseStorage.supabase
         .from('participants')
-        .select('declared_price')
+        .select('instructions_read, declared_price')
         .eq('id', partnerId)
         .single();
 
-      if (partner && partner.declared_price !== null) {
+      if (partner && partner.instructions_read === true && partner.declared_price !== null) {
         setPartnerReady(true);
         setMessage('Partner gotowy! Przechodzenie do czatu...');
 

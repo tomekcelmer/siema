@@ -29,6 +29,7 @@ export interface Participant {
   pairId?: string;
   currentPage: number;
   consentGiven: boolean;
+  instructionsRead?: boolean;
   createdAt: string;
 }
 
