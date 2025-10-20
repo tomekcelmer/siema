@@ -78,11 +78,11 @@ export class SupabasePairing {
         await SupabaseStorage.saveChatRoom(room);
 
         seller.pairId = roomId;
-        seller.currentPage = 5;
+        seller.currentPage = 4;
         await SupabaseStorage.saveParticipant(seller);
 
         buyer.pairId = roomId;
-        buyer.currentPage = 5;
+        buyer.currentPage = 4;
         await SupabaseStorage.saveParticipant(buyer);
       }
     }
