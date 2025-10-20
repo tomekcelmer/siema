@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Download, RefreshCw, Lock, History, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Download, RefreshCw, Lock, History, BarChart3, Trash2, PlayCircle, PauseCircle } from 'lucide-react';
 import { SupabaseStorage } from '../lib/supabaseStorage';
 import { SupabasePairing } from '../lib/supabasePairing';
 import { Experiment, ExperimentType } from '../types';
@@ -213,6 +213,47 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
     }
   };
 
+  const handleDeleteExperiment = async (expId: string) => {
+    if (!confirm('Czy na pewno chcesz usunąć ten eksperyment? Wszystkie dane zostaną bezpowrotnie utracone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await SupabaseStorage.supabase
+        .from('experiments')
+        .delete()
+        .eq('id', expId);
+
+      if (error) throw error;
+
+      await loadAllExperiments();
+      alert('Eksperyment został usunięty');
+    } catch (error) {
+      console.error('Error deleting experiment:', error);
+      alert('Błąd podczas usuwania eksperymentu');
+    }
+  };
+
+  const handleToggleExperimentStatus = async (expId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+    const statusText = newStatus === 'active' ? 'aktywowany' : 'dezaktywowany';
+
+    try {
+      const { error } = await SupabaseStorage.supabase
+        .from('experiments')
+        .update({ status: newStatus })
+        .eq('id', expId);
+
+      if (error) throw error;
+
+      await loadAllExperiments();
+      alert(`Eksperyment został ${statusText}`);
+    } catch (error) {
+      console.error('Error toggling experiment status:', error);
+      alert('Błąd podczas zmiany statusu eksperymentu');
+    }
+  };
+
   const handleBackToLogin = () => {
     setView('login');
     setPassword('');
@@ -332,6 +373,20 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
                         >
                           Zobacz
+                        </button>
+                        <button
+                          onClick={() => handleToggleExperimentStatus(exp.id, exp.status)}
+                          className={`${exp.status === 'active' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2`}
+                          title={exp.status === 'active' ? 'Dezaktywuj' : 'Aktywuj'}
+                        >
+                          {exp.status === 'active' ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExperiment(exp.id)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2"
+                          title="Usuń eksperyment"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
