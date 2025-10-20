@@ -38,7 +38,6 @@ export interface ChatRoom {
   variant: Variant;
   sellerId: string;
   buyerId: string;
-  timerStartedAt: string;
   timerEndsAt: string;
   status: RoomStatus;
   createdAt: string;

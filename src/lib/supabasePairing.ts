@@ -1,13 +1,11 @@
 import { Participant, ChatRoom, Variant, ExperimentType } from '../types';
-import { StorageManager } from './storage';
+import { SupabaseStorage } from './supabaseStorage';
 import { AUTO_MESSAGE, hasAutoMessage } from './instructions';
 
-export class PairingManager {
-  static assignRolesAndVariants(participants: Participant[]): void {
+export class SupabasePairing {
+  static async assignRolesAndVariants(participants: Participant[]): Promise<void> {
     const totalPairs = Math.floor(participants.length / 2);
-
     const variantCounts = this.distributeVariants(totalPairs);
-
     const shuffled = [...participants].sort(() => Math.random() - 0.5);
 
     let participantIndex = 0;
@@ -23,7 +21,7 @@ export class PairingManager {
           seller.role = 'seller';
           seller.variant = variant;
           seller.currentPage = 3;
-          StorageManager.saveParticipant(seller);
+          await SupabaseStorage.saveParticipant(seller);
           participantIndex++;
         }
 
@@ -32,7 +30,7 @@ export class PairingManager {
           buyer.role = 'buyer';
           buyer.variant = variant;
           buyer.currentPage = 3;
-          StorageManager.saveParticipant(buyer);
+          await SupabaseStorage.saveParticipant(buyer);
           participantIndex++;
         }
       }
@@ -42,7 +40,6 @@ export class PairingManager {
   private static distributeVariants(totalPairs: number): number[] {
     const baseCount = Math.floor(totalPairs / 4);
     const remainder = totalPairs % 4;
-
     const counts = [baseCount, baseCount, baseCount, baseCount];
 
     for (let i = 0; i < remainder; i++) {
@@ -52,23 +49,19 @@ export class PairingManager {
     return counts;
   }
 
-  static createPairs(experimentId: string, experimentType: ExperimentType): void {
-    const participants = StorageManager.getParticipantsByExperiment(experimentId);
-
+  static async createPairs(experimentId: string, experimentType: ExperimentType): Promise<void> {
+    const participants = await SupabaseStorage.getParticipantsByExperiment(experimentId);
     const variants: Variant[] = ['A', 'B', 'C', 'D'];
 
-    variants.forEach(variant => {
+    for (const variant of variants) {
       const sellers = participants.filter(p => p.variant === variant && p.role === 'seller');
       const buyers = participants.filter(p => p.variant === variant && p.role === 'buyer');
-
       const pairCount = Math.min(sellers.length, buyers.length);
 
       for (let i = 0; i < pairCount; i++) {
         const seller = sellers[i];
         const buyer = buyers[i];
-
-        const roomId = StorageManager.generateId();
-
+        const roomId = SupabaseStorage.generateId();
         const now = new Date();
         const endsAt = new Date(now.getTime() + 10 * 60 * 1000);
 
@@ -83,31 +76,17 @@ export class PairingManager {
           createdAt: now.toISOString()
         };
 
-        StorageManager.saveChatRoom(room);
+        await SupabaseStorage.saveChatRoom(room);
 
         seller.pairId = roomId;
         seller.currentPage = 5;
-        StorageManager.saveParticipant(seller);
+        await SupabaseStorage.saveParticipant(seller);
 
         buyer.pairId = roomId;
         buyer.currentPage = 5;
-        StorageManager.saveParticipant(buyer);
-
-        if (hasAutoMessage(variant)) {
-          setTimeout(() => {
-            const systemMessage = {
-              id: StorageManager.generateId(),
-              roomId,
-              participantId: seller.id,
-              messageText: AUTO_MESSAGE,
-              messageType: 'system' as const,
-              createdAt: new Date().toISOString()
-            };
-            StorageManager.saveChatMessage(systemMessage);
-          }, 100);
-        }
+        await SupabaseStorage.saveParticipant(buyer);
       }
-    });
+    }
   }
 
   static calculateReward(finalPrice: number, role: 'seller' | 'buyer'): number {
