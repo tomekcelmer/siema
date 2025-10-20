@@ -590,10 +590,96 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
             experimentType={currentExperiment.experimentType}
             refreshKey={refreshKey}
           />
+
+          <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 mt-6 border border-white/20">
+            <h2 className="text-2xl font-bold text-white mb-6">Klucze Sesji Uczestników</h2>
+            <ParticipantSessionTable experimentId={currentExperiment.id} refreshKey={refreshKey} />
+          </div>
         </div>
       </div>
     );
   }
 
   return null;
+}
+
+interface ParticipantSessionTableProps {
+  experimentId: string;
+  refreshKey: number;
+}
+
+function ParticipantSessionTable({ experimentId, refreshKey }: ParticipantSessionTableProps) {
+  const [participants, setParticipants] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadParticipants = async () => {
+      try {
+        const loaded = await SupabaseStorage.getParticipantsByExperiment(experimentId);
+        setParticipants(loaded);
+      } catch (error) {
+        console.error('Error loading participants:', error);
+      }
+    };
+
+    loadParticipants();
+    const interval = setInterval(loadParticipants, 2000);
+
+    return () => clearInterval(interval);
+  }, [experimentId, refreshKey]);
+
+  return (
+    <div className="overflow-x-auto">
+      {participants.length === 0 ? (
+        <div className="text-center py-8 text-white/60">
+          Brak uczestników
+        </div>
+      ) : (
+        <table className="w-full">
+          <thead className="border-b-2 border-white/20">
+            <tr>
+              <th className="text-left py-3 px-4 text-white font-semibold">Imię</th>
+              <th className="text-left py-3 px-4 text-white font-semibold">Nazwisko</th>
+              <th className="text-left py-3 px-4 text-white font-semibold">Klucz Sesji (ID)</th>
+              <th className="text-left py-3 px-4 text-white font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {participants.map((p) => (
+              <tr key={p.id} className="border-b border-white/10 hover:bg-white/5">
+                <td className="py-3 px-4 text-blue-100">{p.firstName}</td>
+                <td className="py-3 px-4 text-blue-100">{p.lastName}</td>
+                <td className="py-3 px-4 text-green-300 font-mono text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="break-all">{p.sessionId}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(p.sessionId);
+                        alert('Klucz sesji skopiowany do schowka');
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded"
+                    >
+                      Kopiuj
+                    </button>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  {p.currentPage === 8 ? (
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      p.finalPrice !== undefined ? 'bg-green-500/30 text-green-200' : 'bg-red-500/30 text-red-200'
+                    }`}>
+                      {p.finalPrice !== undefined ? 'Transakcja' : 'Brak transakcji'}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-500/30 text-blue-200">
+                      W trakcie
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
 }
