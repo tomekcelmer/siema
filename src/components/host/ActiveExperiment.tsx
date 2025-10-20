@@ -79,11 +79,14 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-6">
-      <div className="bg-white rounded-2xl shadow-xl p-6">
-        <h2 className="text-2xl font-bold text-slate-800 mb-6">
-          Pokoje Czatowe ({rooms.length})
-        </h2>
+    <div className="space-y-6">
+      <ParticipantsTable experimentId={experimentId} refreshKey={refreshKey} />
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h2 className="text-2xl font-bold text-slate-800 mb-6">
+            Pokoje Czatowe ({rooms.length})
+          </h2>
 
         {rooms.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
@@ -160,9 +163,9 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
             })}
           </div>
         )}
-      </div>
+        </div>
 
-      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="bg-white rounded-2xl shadow-xl p-6">
         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
           <MessageSquare className="w-6 h-6" />
           Wgląd do Czatu
@@ -179,7 +182,104 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
             <p>Wybierz pokój aby zobaczyć czat</p>
           </div>
         )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+interface ParticipantsTableProps {
+  experimentId: string;
+  refreshKey: number;
+}
+
+function ParticipantsTable({ experimentId, refreshKey }: ParticipantsTableProps) {
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
+  useEffect(() => {
+    const loadParticipants = async () => {
+      try {
+        const loaded = await SupabaseStorage.getParticipantsByExperiment(experimentId);
+        setParticipants(loaded);
+      } catch (error) {
+        console.error('Error loading participants:', error);
+      }
+    };
+
+    loadParticipants();
+    const interval = setInterval(loadParticipants, 2000);
+
+    return () => clearInterval(interval);
+  }, [experimentId, refreshKey]);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-6">
+      <h2 className="text-2xl font-bold text-slate-800 mb-6">
+        Uczestnicy ({participants.length})
+      </h2>
+
+      {participants.length === 0 ? (
+        <div className="text-center py-8 text-slate-500">
+          Brak uczestników
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-slate-200">
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Imię</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Nazwisko</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Rola</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Wariant</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Cena Zadeklarowana</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Cena Finalna</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Nagroda</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {participants.map((p) => (
+                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-3 px-4 text-slate-800">{p.firstName}</td>
+                  <td className="py-3 px-4 text-slate-800">{p.lastName}</td>
+                  <td className="py-3 px-4 text-slate-700">
+                    {p.role === 'seller' ? 'Sprzedający' : p.role === 'buyer' ? 'Kupujący' : '-'}
+                  </td>
+                  <td className="py-3 px-4 text-slate-700">{p.variant || '-'}</td>
+                  <td className="py-3 px-4 text-slate-700">
+                    {p.declaredPrice ? `${p.declaredPrice.toFixed(2)} zł` : '-'}
+                  </td>
+                  <td className="py-3 px-4 text-slate-700">
+                    {p.finalPrice !== undefined ? `${p.finalPrice.toFixed(2)} zł` : '-'}
+                  </td>
+                  <td className="py-3 px-4 font-semibold">
+                    {p.reward !== undefined ? (
+                      <span className={p.reward > 0 ? 'text-green-600' : 'text-slate-600'}>
+                        {p.reward.toFixed(2)} zł
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {p.currentPage === 8 ? (
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        p.finalPrice !== undefined ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {p.finalPrice !== undefined ? 'Transakcja' : 'Brak transakcji'}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                        W trakcie
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

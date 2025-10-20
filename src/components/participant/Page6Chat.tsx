@@ -97,7 +97,7 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
 
       if (room.status === 'completed') {
         const updatedParticipant = await SupabaseStorage.getParticipant(participant.id);
-        if (updatedParticipant?.finalPrice) {
+        if (updatedParticipant?.finalPrice !== undefined) {
           setTimeout(onComplete, 1000);
         }
       }
@@ -154,8 +154,10 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
   const handleOfferResponse = async (message: ChatMessage, accept: boolean) => {
     if (!participant.pairId || !room) return;
 
-    message.offerStatus = accept ? 'accepted' : 'rejected';
-    await SupabaseStorage.saveChatMessage(message);
+    const updatedMessage = { ...message, offerStatus: accept ? 'accepted' as const : 'rejected' as const };
+    await SupabaseStorage.saveChatMessage(updatedMessage);
+
+    setMessages(prev => prev.map(m => m.id === updatedMessage.id ? updatedMessage : m));
 
     if (accept && message.offerPrice) {
       const [seller, buyer] = await Promise.all([
@@ -344,7 +346,6 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
                 value={offerPrice}
                 onChange={(e) => setOfferPrice(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Wpisz cenę, np. 850.00"
               />
               <div className="flex gap-2">
                 <button

@@ -7,7 +7,7 @@ interface Page8CompleteProps {
 }
 
 export function Page8Complete({ participant, onBack }: Page8CompleteProps) {
-  const hasTransaction = participant.finalPrice !== undefined && participant.finalPrice > 0;
+  const hasTransaction = participant.finalPrice !== undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">

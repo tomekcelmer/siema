@@ -148,7 +148,7 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
       const csvHeader = 'Imię,Nazwisko,Rola,Wariant,Cena Zadeklarowana,Cena Finalna,Nagroda,Czas Transakcji\n';
       const csvRows = participants.map(p => {
         const role = p.role === 'seller' ? 'Sprzedający' : 'Kupujący';
-        const finalPrice = p.finalPrice ? p.finalPrice.toFixed(2) : 'Brak transakcji';
+        const finalPrice = p.finalPrice !== undefined ? p.finalPrice.toFixed(2) : 'Brak transakcji';
         const reward = p.reward !== undefined ? p.reward.toFixed(2) : '0.00';
         const time = p.transactionTime ? new Date(p.transactionTime).toLocaleString('pl-PL') : '-';
         const declaredPrice = p.declaredPrice ? p.declaredPrice.toFixed(2) : '-';

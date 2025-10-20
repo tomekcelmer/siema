@@ -81,7 +81,6 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
             value={declaredPrice}
             onChange={(e) => setDeclaredPrice(e.target.value)}
             className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors mb-2"
-            placeholder="np. 850.00"
             required
           />
 
