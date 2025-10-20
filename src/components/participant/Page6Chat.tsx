@@ -233,6 +233,36 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     );
   }
 
+  if (room.status === 'waiting') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
+          <Clock className="w-16 h-16 text-blue-600 mx-auto mb-6 animate-pulse" />
+          <h1 className="text-3xl font-bold text-slate-800 mb-4">
+            Oczekiwanie na Partnera
+          </h1>
+          <p className="text-lg text-slate-600 mb-4">
+            Jesteś w pokoju negocjacyjnym. Timer wystartuje gdy druga osoba również będzie gotowa.
+          </p>
+          <div className="bg-blue-50 p-6 rounded-lg">
+            <p className="text-sm text-slate-700 mb-2">
+              <span className="font-semibold">Status:</span> Oczekiwanie
+            </p>
+            <p className="text-sm text-slate-700">
+              <span className="font-semibold">Twoja rola:</span>{' '}
+              <span className="text-blue-600 font-semibold">
+                {participant.role === 'seller' ? 'Sprzedający' : 'Kupujący'}
+              </span>
+            </p>
+          </div>
+          <p className="text-xs text-slate-500 mt-6">
+            Za chwilę rozpoczną się negocjacje...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col" style={{ height: '90vh' }}>

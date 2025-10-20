@@ -63,7 +63,6 @@ export class SupabasePairing {
         const buyer = buyers[i];
         const roomId = SupabaseStorage.generateId();
         const now = new Date();
-        const endsAt = new Date(now.getTime() + 10 * 60 * 1000);
 
         const room: ChatRoom = {
           id: roomId,
@@ -71,8 +70,8 @@ export class SupabasePairing {
           variant,
           sellerId: seller.id,
           buyerId: buyer.id,
-          timerEndsAt: endsAt.toISOString(),
-          status: 'active',
+          timerEndsAt: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+          status: 'waiting',
           createdAt: now.toISOString()
         };
 
@@ -86,6 +85,22 @@ export class SupabasePairing {
         buyer.currentPage = 5;
         await SupabaseStorage.saveParticipant(buyer);
       }
+    }
+  }
+
+  static async checkAndStartTimer(roomId: string): Promise<void> {
+    const room = await SupabaseStorage.getChatRoom(roomId);
+    if (!room) return;
+
+    if (room.status === 'waiting') {
+      const now = new Date();
+      const endsAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+      room.timerEndsAt = endsAt.toISOString();
+      room.status = 'active';
+      await SupabaseStorage.saveChatRoom(room);
+
+      console.log(`Timer started for room ${roomId} - ends at ${endsAt.toISOString()}`);
     }
   }
 
