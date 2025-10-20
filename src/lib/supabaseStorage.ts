@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import { Experiment, Participant, ChatRoom, ChatMessage, ExperimentType, Role, Variant } from '../types';
 
 export class SupabaseStorage {
+  static supabase = supabase;
+
   static generateId(): string {
     return crypto.randomUUID();
   }
