@@ -1,13 +1,41 @@
-import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, RotateCcw } from 'lucide-react';
 import { Participant } from '../../types';
 import { StorageManager } from '../../lib/storage';
+import { SupabaseStorage } from '../../lib/supabaseStorage';
 
 interface Page3WaitingProps {
   participant: Participant;
+  onStartOver?: () => void;
 }
 
-export function Page3Waiting({ participant }: Page3WaitingProps) {
+export function Page3Waiting({ participant, onStartOver }: Page3WaitingProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleStartOver = async () => {
+    if (!confirm('Czy na pewno chcesz rozpocząć od nowa? Twoje dane zostaną usunięte i będziesz musiał zarejestrować się ponownie.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await SupabaseStorage.supabase
+        .from('participants')
+        .delete()
+        .eq('id', participant.id);
+
+      SupabaseStorage.clearCurrentParticipant();
+
+      if (onStartOver) {
+        onStartOver();
+      }
+    } catch (error) {
+      console.error('Error deleting participant:', error);
+      alert('Wystąpił błąd podczas usuwania sesji. Spróbuj ponownie.');
+      setIsDeleting(false);
+    }
+  };
   useEffect(() => {
     const interval = setInterval(() => {
       const updated = StorageManager.getParticipant(participant.id);
@@ -33,7 +61,7 @@ export function Page3Waiting({ participant }: Page3WaitingProps) {
           Zostaniesz automatycznie przypisany do roli i wariantu.
         </p>
 
-        <div className="bg-blue-50 p-6 rounded-lg border-2 border-blue-100">
+        <div className="bg-blue-50 p-6 rounded-lg border-2 border-blue-100 mb-6">
           <p className="text-sm text-slate-700">
             <span className="font-semibold">Twoje ID sesji:</span>
             <br />
@@ -43,6 +71,15 @@ export function Page3Waiting({ participant }: Page3WaitingProps) {
             Zachowaj to ID na wypadek problemów technicznych
           </p>
         </div>
+
+        <button
+          onClick={handleStartOver}
+          disabled={isDeleting}
+          className="flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed mx-auto"
+        >
+          <RotateCcw className="w-5 h-5" />
+          {isDeleting ? 'Usuwanie...' : 'Zacznij od Nowa'}
+        </button>
       </div>
     </div>
   );

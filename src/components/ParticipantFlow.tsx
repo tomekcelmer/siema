@@ -114,7 +114,10 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
         />
       );
     case 3:
-      return <Page3Waiting participant={participant} />;
+      return <Page3Waiting participant={participant} onStartOver={() => {
+        setParticipant(null);
+        setCurrentPage(1);
+      }} />;
     case 4:
       return (
         <Page4Instructions
