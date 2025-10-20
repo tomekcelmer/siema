@@ -81,18 +81,15 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
         setShowWarning(true);
       }
 
-      if (remaining === 0 && room.status === 'active') {
-        room.status = 'no_transaction';
-        await SupabaseStorage.saveChatRoom(room);
-
+      if (room.status === 'no_transaction') {
         const updatedParticipant = await SupabaseStorage.getParticipant(participant.id);
-        if (updatedParticipant) {
+        if (updatedParticipant && updatedParticipant.currentPage !== 8) {
           updatedParticipant.finalPrice = undefined;
           updatedParticipant.reward = 0;
+          updatedParticipant.currentPage = 8;
           await SupabaseStorage.saveParticipant(updatedParticipant);
         }
-
-        setTimeout(onComplete, 2000);
+        setTimeout(onComplete, 1000);
       }
 
       if (room.status === 'completed') {
@@ -157,9 +154,22 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     const updatedMessage = { ...message, offerStatus: accept ? 'accepted' as const : 'rejected' as const };
     await SupabaseStorage.saveChatMessage(updatedMessage);
 
-    setMessages(prev => prev.map(m => m.id === updatedMessage.id ? updatedMessage : m));
+    if (!accept) {
+      const rejectionNotification: ChatMessage = {
+        id: SupabaseStorage.generateId(),
+        roomId: participant.pairId,
+        participantId: participant.id,
+        messageText: `Odrzucono ofertę: ${message.offerPrice?.toFixed(2)} zł`,
+        messageType: 'chat',
+        createdAt: new Date().toISOString()
+      };
+      await SupabaseStorage.saveChatMessage(rejectionNotification);
+    }
 
     if (accept && message.offerPrice) {
+      room.status = 'completed';
+      await SupabaseStorage.saveChatRoom(room);
+
       const [seller, buyer] = await Promise.all([
         SupabaseStorage.getParticipant(room.sellerId),
         SupabaseStorage.getParticipant(room.buyerId)
@@ -180,12 +190,9 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
       buyer.transactionTime = new Date().toISOString();
       buyer.currentPage = 8;
 
-      room.status = 'completed';
-
       await Promise.all([
         SupabaseStorage.saveParticipant(seller),
-        SupabaseStorage.saveParticipant(buyer),
-        SupabaseStorage.saveChatRoom(room)
+        SupabaseStorage.saveParticipant(buyer)
       ]);
 
       setTimeout(onComplete, 1000);
@@ -265,11 +272,15 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     );
   }
 
+  const instructions = participant.role && participant.variant
+    ? require('../../lib/instructions').getInstructions(participant.role, participant.variant)
+    : [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col" style={{ height: '90vh' }}>
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-2xl font-bold">Negocjacje</h2>
               <p className="text-blue-100 text-sm mt-1">
@@ -287,6 +298,23 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
                   <span>Pozostały 2 minuty!</span>
                 </div>
               )}
+              <p className="text-sm text-blue-100 mt-2">Timer orientacyjny</p>
+            </div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex gap-2 mb-2">
+              <span className="bg-white/20 px-3 py-1 rounded text-sm font-semibold">
+                {participant.role === 'seller' ? 'SPRZEDAJĄCY' : 'KUPUJĄCY'}
+              </span>
+              <span className="bg-white/20 px-3 py-1 rounded text-sm font-semibold">
+                WARIANT {participant.variant}
+              </span>
+            </div>
+            <div className="text-sm text-blue-50 space-y-1 max-h-32 overflow-y-auto">
+              {instructions.slice(0, 3).map((line: string, i: number) => (
+                <p key={i}>{line}</p>
+              ))}
             </div>
           </div>
         </div>

@@ -96,7 +96,7 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg flex items-center justify-center gap-2"
           >
-            Przejdź do Negocjacji
+            Gotowy
             <ChevronRight className="w-5 h-5" />
           </button>
         </form>

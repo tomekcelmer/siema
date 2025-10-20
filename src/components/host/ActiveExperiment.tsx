@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, MessageSquare } from 'lucide-react';
+import { Clock, MessageSquare, StopCircle } from 'lucide-react';
 import { SupabaseStorage } from '../../lib/supabaseStorage';
 import { ChatRoom, Participant, ChatMessage, ExperimentType } from '../../types';
 
@@ -13,6 +13,46 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Record<string, Participant>>({});
+
+  const handleEndChat = async (roomId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!confirm('Czy na pewno chcesz zakończyć ten czat bez transakcji?')) {
+      return;
+    }
+
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    try {
+      room.status = 'no_transaction';
+      await SupabaseStorage.saveChatRoom(room);
+
+      const [seller, buyer] = await Promise.all([
+        SupabaseStorage.getParticipant(room.sellerId),
+        SupabaseStorage.getParticipant(room.buyerId)
+      ]);
+
+      if (seller && seller.currentPage !== 8) {
+        seller.finalPrice = undefined;
+        seller.reward = 0;
+        seller.currentPage = 8;
+        await SupabaseStorage.saveParticipant(seller);
+      }
+
+      if (buyer && buyer.currentPage !== 8) {
+        buyer.finalPrice = undefined;
+        buyer.reward = 0;
+        buyer.currentPage = 8;
+        await SupabaseStorage.saveParticipant(buyer);
+      }
+
+      setRooms(prev => prev.map(r => r.id === roomId ? room : r));
+    } catch (error) {
+      console.error('Error ending chat:', error);
+      alert('Błąd podczas kończenia czatu');
+    }
+  };
 
   useEffect(() => {
     const loadRooms = async () => {
@@ -114,9 +154,20 @@ export function ActiveExperiment({ experimentId, experimentType, refreshKey }: A
                       <p className="text-sm text-slate-600">Wariant {room.variant}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(room.status)}`}>
-                        {getStatusText(room.status)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(room.status)}`}>
+                          {getStatusText(room.status)}
+                        </span>
+                        {room.status === 'active' && (
+                          <button
+                            onClick={(e) => handleEndChat(room.id, e)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded transition-all"
+                            title="Zakończ czat"
+                          >
+                            <StopCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                       {room.status === 'active' && (
                         <div className="flex items-center gap-1 text-slate-600">
                           <Clock className="w-4 h-4" />
