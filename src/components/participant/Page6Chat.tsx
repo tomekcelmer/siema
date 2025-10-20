@@ -123,14 +123,23 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     setMessageText('');
   };
 
+  const handleOfferPriceChange = (value: string) => {
+    if (value === '') {
+      setOfferPrice('');
+      return;
+    }
+
+    const regex = /^\d*\.?\d{0,2}$/;
+    if (regex.test(value)) {
+      setOfferPrice(value);
+    }
+  };
+
   const handleSendOffer = async () => {
     if (!participant.pairId) return;
 
     const price = parseFloat(offerPrice);
     if (isNaN(price) || price <= 0) return;
-
-    const decimals = (offerPrice.split('.')[1] || '').length;
-    if (decimals > 2) return;
 
     const message: ChatMessage = {
       id: SupabaseStorage.generateId(),
@@ -303,17 +312,14 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <div className="flex gap-2 mb-2">
+            <div className="mb-2">
               <span className="bg-white/20 px-3 py-1 rounded text-sm font-semibold">
                 {participant.role === 'seller' ? 'SPRZEDAJĄCY' : 'KUPUJĄCY'}
               </span>
-              <span className="bg-white/20 px-3 py-1 rounded text-sm font-semibold">
-                WARIANT {participant.variant}
-              </span>
             </div>
-            <div className="text-sm text-blue-50 space-y-1 max-h-32 overflow-y-auto">
-              {instructions.slice(0, 3).map((line: string, i: number) => (
-                <p key={i}>{line}</p>
+            <div className="text-sm text-blue-50 space-y-1 max-h-40 overflow-y-auto">
+              {instructions.map((line: string, i: number) => (
+                line !== '' && <p key={i}>{line}</p>
               ))}
             </div>
           </div>
@@ -372,8 +378,9 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
               <input
                 type="text"
                 value={offerPrice}
-                onChange={(e) => setOfferPrice(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => handleOfferPriceChange(e.target.value)}
+                placeholder="Wpisz propozycję cenową (np. 1300)"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
               />
               <div className="flex gap-2">
                 <button

@@ -20,6 +20,22 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
   const roleText = participant.role === 'seller' ? 'SPRZEDAJĄCY' : 'KUPUJĄCY';
   const variantText = `WARIANT ${participant.variant}`;
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    if (value === '') {
+      setDeclaredPrice('');
+      setError('');
+      return;
+    }
+
+    const regex = /^\d*\.?\d{0,2}$/;
+    if (regex.test(value)) {
+      setDeclaredPrice(value);
+      setError('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -33,12 +49,6 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
 
     if (price <= 0) {
       setError('Cena musi być dodatnia');
-      return;
-    }
-
-    const decimals = (declaredPrice.split('.')[1] || '').length;
-    if (decimals > 2) {
-      setError('Maksymalnie 2 miejsca po przecinku');
       return;
     }
 
@@ -79,8 +89,9 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
           <input
             type="text"
             value={declaredPrice}
-            onChange={(e) => setDeclaredPrice(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors mb-2"
+            onChange={handlePriceChange}
+            placeholder="Wpisz zadeklarowaną kwotę (np. 1200)"
+            className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors mb-2 placeholder:text-slate-400"
             required
           />
 
