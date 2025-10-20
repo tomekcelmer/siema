@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { Users, X } from 'lucide-react';
 import { SupabaseStorage } from '../../lib/supabaseStorage';
 import { Participant } from '../../types';
 
@@ -11,6 +11,26 @@ interface ParticipantsListProps {
 export function ParticipantsList({ experimentId, refreshKey }: ParticipantsListProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleDisconnect = async (participantId: string) => {
+    if (!confirm('Czy na pewno chcesz rozłączyć tego uczestnika?')) {
+      return;
+    }
+
+    try {
+      const { error } = await SupabaseStorage.supabase
+        .from('participants')
+        .delete()
+        .eq('id', participantId);
+
+      if (error) throw error;
+
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+    } catch (error) {
+      console.error('Error disconnecting participant:', error);
+      alert('Błąd podczas rozłączania uczestnika');
+    }
+  };
 
   useEffect(() => {
     const loadParticipants = async () => {
@@ -67,6 +87,7 @@ export function ParticipantsList({ experimentId, refreshKey }: ParticipantsListP
                 <th className="text-left p-3 text-slate-700 font-semibold">Nazwisko</th>
                 <th className="text-left p-3 text-slate-700 font-semibold">ID Sesji</th>
                 <th className="text-left p-3 text-slate-700 font-semibold">Czas</th>
+                <th className="text-left p-3 text-slate-700 font-semibold">Akcja</th>
               </tr>
             </thead>
             <tbody>
@@ -80,6 +101,15 @@ export function ParticipantsList({ experimentId, refreshKey }: ParticipantsListP
                   </td>
                   <td className="p-3 text-slate-600 text-sm">
                     {new Date(p.createdAt).toLocaleTimeString('pl-PL')}
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleDisconnect(p.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all"
+                      title="Rozłącz uczestnika"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

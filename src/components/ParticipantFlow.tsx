@@ -59,6 +59,11 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
       return (
         <Page2Registration
           onRegister={async (data) => {
+            const experiment = await SupabaseStorage.getExperiment(data.experimentCode);
+            if (!experiment) {
+              return false;
+            }
+
             const newParticipant: Participant = {
               id: SupabaseStorage.generateId(),
               sessionId: SupabaseStorage.generateId(),
@@ -73,6 +78,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
             setParticipant(newParticipant);
             setCurrentPage(3);
             SupabaseStorage.setCurrentParticipant(newParticipant);
+            return true;
           }}
         />
       );
@@ -92,12 +98,18 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
       return (
         <Page2Registration
           onRegister={async (data) => {
+            const experiment = await SupabaseStorage.getExperiment(data.experimentCode);
+            if (!experiment) {
+              return false;
+            }
+
             await handleUpdateParticipant({
               firstName: data.firstName,
               lastName: data.lastName,
               consentGiven: data.consent,
               currentPage: 3
             });
+            return true;
           }}
         />
       );

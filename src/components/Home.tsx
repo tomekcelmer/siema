@@ -1,11 +1,12 @@
-import { MessageSquare, Users, Lock } from 'lucide-react';
+import { MessageSquare, Users, Lock, RotateCcw } from 'lucide-react';
 
 interface HomeProps {
   onStartParticipant: () => void;
   onStartHost: () => void;
+  onRestoreSession: () => void;
 }
 
-export function Home({ onStartParticipant, onStartHost }: HomeProps) {
+export function Home({ onStartParticipant, onStartHost, onRestoreSession }: HomeProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-5xl w-full">
@@ -27,7 +28,7 @@ export function Home({ onStartParticipant, onStartHost }: HomeProps) {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             <button
               onClick={onStartParticipant}
               className="group bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 backdrop-blur-sm border-2 border-blue-400/30 hover:border-blue-400/60 text-white font-semibold py-10 px-8 rounded-2xl transition-all transform hover:scale-105 shadow-xl"
@@ -37,9 +38,24 @@ export function Home({ onStartParticipant, onStartHost }: HomeProps) {
                   <Users className="w-12 h-12 text-blue-200" />
                 </div>
               </div>
-              <div className="text-3xl mb-3">Uczestnik</div>
-              <div className="text-base text-blue-100">
+              <div className="text-2xl mb-3">Uczestnik</div>
+              <div className="text-sm text-blue-100">
                 Dołącz do eksperymentu jako uczestnik
+              </div>
+            </button>
+
+            <button
+              onClick={onRestoreSession}
+              className="group bg-gradient-to-br from-green-500/20 to-green-600/20 hover:from-green-500/30 hover:to-green-600/30 backdrop-blur-sm border-2 border-green-400/30 hover:border-green-400/60 text-white font-semibold py-10 px-8 rounded-2xl transition-all transform hover:scale-105 shadow-xl"
+            >
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-green-500/30 p-4 rounded-xl group-hover:bg-green-500/40 transition-all">
+                  <RotateCcw className="w-12 h-12 text-green-200" />
+                </div>
+              </div>
+              <div className="text-2xl mb-3">Przywróć Sesję</div>
+              <div className="text-sm text-green-100">
+                Wróć do eksperymentu używając ID sesji
               </div>
             </button>
 
@@ -52,8 +68,8 @@ export function Home({ onStartParticipant, onStartHost }: HomeProps) {
                   <Lock className="w-12 h-12 text-purple-200" />
                 </div>
               </div>
-              <div className="text-3xl mb-3">Gospodarz</div>
-              <div className="text-base text-purple-100">
+              <div className="text-2xl mb-3">Gospodarz</div>
+              <div className="text-sm text-purple-100">
                 Panel zarządzania i monitoringu
               </div>
             </button>

@@ -1,25 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { SupabaseStorage } from '../lib/supabaseStorage';
 import { Participant } from '../types';
 
 interface RecoveryProps {
-  sessionId: string;
   onBack: () => void;
+  onRestore: () => void;
 }
 
-export function Recovery({ sessionId, onBack }: RecoveryProps) {
-  const [inputSessionId, setInputSessionId] = useState(sessionId);
+export function Recovery({ onBack, onRestore }: RecoveryProps) {
+  const [inputSessionId, setInputSessionId] = useState('');
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [error, setError] = useState('');
   const [recovered, setRecovered] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (sessionId) {
-      handleRecover(sessionId);
-    }
-  }, [sessionId]);
 
   const handleRecover = async (id: string) => {
     setError('');
@@ -34,7 +28,7 @@ export function Recovery({ sessionId, onBack }: RecoveryProps) {
         setRecovered(true);
 
         setTimeout(() => {
-          window.location.href = '/participant';
+          onRestore();
         }, 2000);
       } else {
         setError('Nie znaleziono sesji o podanym ID. Sprawdź poprawność ID i spróbuj ponownie.');

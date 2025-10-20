@@ -9,20 +9,14 @@ type View = 'home' | 'participant' | 'host' | 'recovery';
 
 function App() {
   const [view, setView] = useState<View>('home');
-  const [recoverySessionId, setRecoverySessionId] = useState<string>('');
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(window.location.search);
 
     if (hash === '/host') {
       setView('host');
     } else if (hash === '/recovery') {
-      const sessionId = params.get('id');
-      if (sessionId) {
-        setRecoverySessionId(sessionId);
-        setView('recovery');
-      }
+      setView('recovery');
     } else if (hash === '/participant') {
       const current = SupabaseStorage.getCurrentParticipant();
       if (current) {
@@ -41,14 +35,24 @@ function App() {
     window.location.hash = '#/host';
   };
 
+  const handleStartRecovery = () => {
+    setView('recovery');
+    window.location.hash = '#/recovery';
+  };
+
   const handleBackToHome = () => {
     setView('home');
     window.location.hash = '#/';
     SupabaseStorage.clearCurrentParticipant();
   };
 
+  const handleRestoreSession = () => {
+    setView('participant');
+    window.location.hash = '#/participant';
+  };
+
   if (view === 'recovery') {
-    return <Recovery sessionId={recoverySessionId} onBack={handleBackToHome} />;
+    return <Recovery onBack={handleBackToHome} onRestore={handleRestoreSession} />;
   }
 
   if (view === 'host') {
@@ -63,6 +67,7 @@ function App() {
     <Home
       onStartParticipant={handleStartParticipant}
       onStartHost={handleStartHost}
+      onRestoreSession={handleStartRecovery}
     />
   );
 }

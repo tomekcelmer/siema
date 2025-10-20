@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 interface Page2RegistrationProps {
-  onRegister: (data: { firstName: string; lastName: string; consent: boolean; experimentCode: string }) => void;
+  onRegister: (data: { firstName: string; lastName: string; consent: boolean; experimentCode: string }) => Promise<boolean>;
 }
 
 export function Page2Registration({ onRegister }: Page2RegistrationProps) {
@@ -10,11 +10,19 @@ export function Page2Registration({ onRegister }: Page2RegistrationProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [consent, setConsent] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (experimentCode && firstName && lastName && consent) {
-      onRegister({ firstName, lastName, consent, experimentCode: experimentCode.toLowerCase() });
+      setIsSubmitting(true);
+      setError('');
+      const success = await onRegister({ firstName, lastName, consent, experimentCode: experimentCode.toLowerCase() });
+      if (!success) {
+        setError('Kod eksperymentu nie istnieje. Sprawdź kod i spróbuj ponownie.');
+      }
+      setIsSubmitting(false);
     }
   };
 
@@ -93,17 +101,23 @@ export function Page2Registration({ onRegister }: Page2RegistrationProps) {
             </label>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+              <p className="text-red-700 font-semibold">{error}</p>
+            </div>
+          )}
+
           <div className="flex justify-center pt-4">
             <button
               type="submit"
-              disabled={!isValid}
+              disabled={!isValid || isSubmitting}
               className={`${
-                isValid
+                isValid && !isSubmitting
                   ? 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105'
                   : 'bg-slate-300 cursor-not-allowed'
               } text-white font-semibold py-4 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2`}
             >
-              Dalej
+              {isSubmitting ? 'Sprawdzanie...' : 'Dalej'}
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
