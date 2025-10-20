@@ -2,22 +2,23 @@ import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 interface Page2RegistrationProps {
-  onRegister: (data: { firstName: string; lastName: string; consent: boolean }) => void;
+  onRegister: (data: { firstName: string; lastName: string; consent: boolean; experimentCode: string }) => void;
 }
 
 export function Page2Registration({ onRegister }: Page2RegistrationProps) {
+  const [experimentCode, setExperimentCode] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [consent, setConsent] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (firstName && lastName && consent) {
-      onRegister({ firstName, lastName, consent });
+    if (experimentCode && firstName && lastName && consent) {
+      onRegister({ firstName, lastName, consent, experimentCode: experimentCode.toLowerCase() });
     }
   };
 
-  const isValid = firstName.trim() !== '' && lastName.trim() !== '' && consent;
+  const isValid = experimentCode.trim() !== '' && firstName.trim() !== '' && lastName.trim() !== '' && consent;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
@@ -27,6 +28,21 @@ export function Page2Registration({ onRegister }: Page2RegistrationProps) {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="experimentCode" className="block text-sm font-semibold text-slate-700 mb-2">
+              Kod Eksperymentu *
+            </label>
+            <input
+              type="text"
+              id="experimentCode"
+              value={experimentCode}
+              onChange={(e) => setExperimentCode(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+              placeholder="Wpisz kod podany przez gospodarza"
+              required
+            />
+          </div>
+
           <div>
             <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-2">
               Imię *

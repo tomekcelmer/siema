@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Clock, AlertCircle } from 'lucide-react';
 import { Participant, ChatMessage, ChatRoom } from '../../types';
-import { StorageManager } from '../../lib/storage';
-import { AUTO_MESSAGE, hasAutoMessage } from '../../lib/instructions';
+import { SupabaseStorage } from '../../lib/supabaseStorage';
+import { SupabasePairing } from '../../lib/supabasePairing';
 
 interface Page6ChatProps {
   participant: Participant;
@@ -17,100 +17,104 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(600);
   const [showWarning, setShowWarning] = useState(false);
-  const [autoMessageSent, setAutoMessageSent] = useState(false);
+  const [experiment, setExperiment] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageChannelRef = useRef<any>(null);
+  const roomChannelRef = useRef<any>(null);
 
-  const experiment = StorageManager.getExperiment(participant.experimentId);
-  const isAnonymous = experiment?.experimentType === 1;
+  useEffect(() => {
+    const loadData = async () => {
+      if (!participant.pairId || !participant.experimentId) return;
+
+      const [chatRoom, loadedMessages, exp] = await Promise.all([
+        SupabaseStorage.getChatRoom(participant.pairId),
+        SupabaseStorage.getMessagesByRoom(participant.pairId),
+        SupabaseStorage.getExperiment(participant.experimentId)
+      ]);
+
+      setRoom(chatRoom);
+      setMessages(loadedMessages);
+      setExperiment(exp);
+    };
+
+    loadData();
+  }, [participant.pairId, participant.experimentId]);
 
   useEffect(() => {
     if (!participant.pairId) return;
 
-    const chatRoom = StorageManager.getChatRoom(participant.pairId);
-    setRoom(chatRoom || null);
-
-    const loadedMessages = StorageManager.getMessagesByRoom(participant.pairId);
-    setMessages(loadedMessages);
-
-    if (!autoMessageSent && chatRoom && participant.role === 'seller' && participant.variant && hasAutoMessage(participant.variant)) {
-      const existingAutoMsg = loadedMessages.find(m => m.messageText === AUTO_MESSAGE && m.participantId === participant.id);
-
-      if (!existingAutoMsg) {
-        setTimeout(() => {
-          const autoMsg: ChatMessage = {
-            id: StorageManager.generateId(),
-            roomId: participant.pairId!,
-            participantId: participant.id,
-            messageText: AUTO_MESSAGE,
-            messageType: 'chat',
-            createdAt: new Date().toISOString()
-          };
-          StorageManager.saveChatMessage(autoMsg);
-          setAutoMessageSent(true);
-        }, 1000);
-      } else {
-        setAutoMessageSent(true);
+    messageChannelRef.current = SupabaseStorage.subscribeToMessages(
+      participant.pairId,
+      (newMessages) => {
+        setMessages(newMessages);
       }
-    }
+    );
 
-    const messageHandler = (e: Event) => {
-      const customEvent = e as CustomEvent<ChatMessage>;
-      if (customEvent.detail.roomId === participant.pairId) {
-        setMessages(prev => [...prev, customEvent.detail]);
+    roomChannelRef.current = SupabaseStorage.subscribeToChatRoom(
+      participant.pairId,
+      (updatedRoom) => {
+        setRoom(updatedRoom);
+      }
+    );
+
+    return () => {
+      if (messageChannelRef.current) {
+        SupabaseStorage.unsubscribe(messageChannelRef.current);
+      }
+      if (roomChannelRef.current) {
+        SupabaseStorage.unsubscribe(roomChannelRef.current);
       }
     };
+  }, [participant.pairId]);
 
-    window.addEventListener('chatMessage', messageHandler);
+  useEffect(() => {
+    if (!room) return;
 
-    const interval = setInterval(() => {
-      const updatedRoom = StorageManager.getChatRoom(participant.pairId!);
-      if (updatedRoom) {
-        setRoom(updatedRoom);
+    const interval = setInterval(async () => {
+      const endTime = new Date(room.timerEndsAt).getTime();
+      const now = new Date().getTime();
+      const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
 
-        const endTime = new Date(updatedRoom.timerEndsAt).getTime();
-        const now = new Date().getTime();
-        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+      setTimeRemaining(remaining);
 
-        setTimeRemaining(remaining);
+      if (remaining <= 120 && remaining > 0 && !showWarning) {
+        setShowWarning(true);
+      }
 
-        if (remaining <= 120 && remaining > 0 && !showWarning) {
-          setShowWarning(true);
+      if (remaining === 0 && room.status === 'active') {
+        room.status = 'no_transaction';
+        await SupabaseStorage.saveChatRoom(room);
+
+        const updatedParticipant = await SupabaseStorage.getParticipant(participant.id);
+        if (updatedParticipant) {
+          updatedParticipant.finalPrice = undefined;
+          updatedParticipant.reward = 0;
+          await SupabaseStorage.saveParticipant(updatedParticipant);
         }
 
-        if (remaining === 0 && updatedRoom.status === 'active') {
-          updatedRoom.status = 'no_transaction';
-          StorageManager.saveChatRoom(updatedRoom);
+        setTimeout(onComplete, 2000);
+      }
 
-          const updatedParticipant = { ...participant, finalPrice: undefined, reward: 0 };
-          StorageManager.saveParticipant(updatedParticipant);
-
-          setTimeout(onComplete, 2000);
-        }
-
-        if (updatedRoom.status === 'completed') {
-          const updatedParticipant = StorageManager.getParticipant(participant.id);
-          if (updatedParticipant?.finalPrice) {
-            setTimeout(onComplete, 1000);
-          }
+      if (room.status === 'completed') {
+        const updatedParticipant = await SupabaseStorage.getParticipant(participant.id);
+        if (updatedParticipant?.finalPrice) {
+          setTimeout(onComplete, 1000);
         }
       }
     }, 1000);
 
-    return () => {
-      window.removeEventListener('chatMessage', messageHandler);
-      clearInterval(interval);
-    };
-  }, [participant.pairId, participant.id, onComplete, showWarning]);
+    return () => clearInterval(interval);
+  }, [room, participant.id, onComplete, showWarning]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageText.trim() || !participant.pairId) return;
 
     const message: ChatMessage = {
-      id: StorageManager.generateId(),
+      id: SupabaseStorage.generateId(),
       roomId: participant.pairId,
       participantId: participant.id,
       messageText: messageText.trim(),
@@ -118,11 +122,11 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
       createdAt: new Date().toISOString()
     };
 
-    StorageManager.saveChatMessage(message);
+    await SupabaseStorage.saveChatMessage(message);
     setMessageText('');
   };
 
-  const handleSendOffer = () => {
+  const handleSendOffer = async () => {
     if (!participant.pairId) return;
 
     const price = parseFloat(offerPrice);
@@ -132,7 +136,7 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     if (decimals > 2) return;
 
     const message: ChatMessage = {
-      id: StorageManager.generateId(),
+      id: SupabaseStorage.generateId(),
       roomId: participant.pairId,
       participantId: participant.id,
       messageText: `Propozycja: ${price.toFixed(2)} zł`,
@@ -142,38 +146,45 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
       createdAt: new Date().toISOString()
     };
 
-    StorageManager.saveChatMessage(message);
+    await SupabaseStorage.saveChatMessage(message);
     setOfferPrice('');
     setShowOfferInput(false);
   };
 
-  const handleOfferResponse = (message: ChatMessage, accept: boolean) => {
+  const handleOfferResponse = async (message: ChatMessage, accept: boolean) => {
     if (!participant.pairId || !room) return;
 
     message.offerStatus = accept ? 'accepted' : 'rejected';
-    StorageManager.saveChatMessage({ ...message });
+    await SupabaseStorage.saveChatMessage(message);
 
     if (accept && message.offerPrice) {
-      const seller = StorageManager.getParticipant(room.sellerId)!;
-      const buyer = StorageManager.getParticipant(room.buyerId)!;
+      const [seller, buyer] = await Promise.all([
+        SupabaseStorage.getParticipant(room.sellerId),
+        SupabaseStorage.getParticipant(room.buyerId)
+      ]);
 
-      const sellerReward = message.offerPrice - 700;
-      const buyerReward = 1100 - message.offerPrice;
+      if (!seller || !buyer) return;
+
+      const sellerReward = SupabasePairing.calculateReward(message.offerPrice, 'seller');
+      const buyerReward = SupabasePairing.calculateReward(message.offerPrice, 'buyer');
 
       seller.finalPrice = message.offerPrice;
       seller.reward = sellerReward;
       seller.transactionTime = new Date().toISOString();
       seller.currentPage = 8;
-      StorageManager.saveParticipant(seller);
 
       buyer.finalPrice = message.offerPrice;
       buyer.reward = buyerReward;
       buyer.transactionTime = new Date().toISOString();
       buyer.currentPage = 8;
-      StorageManager.saveParticipant(buyer);
 
       room.status = 'completed';
-      StorageManager.saveChatRoom(room);
+
+      await Promise.all([
+        SupabaseStorage.saveParticipant(seller),
+        SupabaseStorage.saveParticipant(buyer),
+        SupabaseStorage.saveChatRoom(room)
+      ]);
 
       setTimeout(onComplete, 1000);
     }
@@ -185,20 +196,41 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getPartnerName = (senderId: string) => {
+  const getPartnerName = async (senderId: string) => {
     if (senderId === participant.id) return 'Ty';
 
-    if (isAnonymous) {
-      const sender = StorageManager.getParticipant(senderId);
-      return sender?.role === 'seller' ? 'Sprzedający' : 'Kupujący';
+    const sender = await SupabaseStorage.getParticipant(senderId);
+    if (!sender) return 'Partner';
+
+    if (experiment?.experimentType === 1) {
+      return sender.role === 'seller' ? 'Sprzedający' : 'Kupujący';
     } else {
-      const sender = StorageManager.getParticipant(senderId);
-      return sender ? sender.firstName : 'Partner';
+      return sender.firstName;
     }
   };
 
+  const [partnerNames, setPartnerNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const loadNames = async () => {
+      const names: Record<string, string> = {};
+      for (const msg of messages) {
+        if (!names[msg.participantId]) {
+          names[msg.participantId] = await getPartnerName(msg.participantId);
+        }
+      }
+      setPartnerNames(names);
+    };
+
+    loadNames();
+  }, [messages, experiment]);
+
   if (!room) {
-    return <div>Ładowanie...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+        <div className="text-lg text-slate-600">Ładowanie pokoju...</div>
+      </div>
+    );
   }
 
   return (
@@ -209,7 +241,7 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
             <div>
               <h2 className="text-2xl font-bold">Negocjacje</h2>
               <p className="text-blue-100 text-sm mt-1">
-                {isAnonymous ? 'Rozmowa anonimowa' : `Rozmawiasz z ${getPartnerName(room.sellerId === participant.id ? room.buyerId : room.sellerId)}`}
+                {experiment?.experimentType === 1 ? 'Rozmowa anonimowa' : `Rozmawiasz z partnerem`}
               </p>
             </div>
             <div className="text-right">
@@ -230,7 +262,7 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.map((msg) => {
             const isOwn = msg.participantId === participant.id;
-            const senderName = getPartnerName(msg.participantId);
+            const senderName = partnerNames[msg.participantId] || 'Ładowanie...';
 
             return (
               <div

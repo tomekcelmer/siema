@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StorageManager } from '../lib/storage';
+import { SupabaseStorage } from '../lib/supabaseStorage';
 import { Participant } from '../types';
 import { Page1Welcome } from './participant/Page1Welcome';
 import { Page2Registration } from './participant/Page2Registration';
@@ -15,87 +15,89 @@ interface ParticipantFlowProps {
 
 export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
   const [participant, setParticipant] = useState<Participant | null>(
-    StorageManager.getCurrentParticipant()
+    SupabaseStorage.getCurrentParticipant()
   );
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const current = StorageManager.getCurrentParticipant();
+    const loadParticipant = async () => {
+      const current = SupabaseStorage.getCurrentParticipant();
       if (current) {
-        const updated = StorageManager.getParticipant(current.id);
+        const updated = await SupabaseStorage.getParticipant(current.id);
         if (updated) {
           setParticipant(updated);
           setCurrentPage(updated.currentPage);
-          StorageManager.setCurrentParticipant(updated);
+          SupabaseStorage.setCurrentParticipant(updated);
         }
       }
-    }, 1000);
+    };
+
+    loadParticipant();
+    const interval = setInterval(loadParticipant, 2000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const handleUpdateParticipant = (updates: Partial<Participant>) => {
+  const handleUpdateParticipant = async (updates: Partial<Participant>) => {
     if (!participant) return;
 
     const updated = { ...participant, ...updates };
-    StorageManager.saveParticipant(updated);
+    await SupabaseStorage.saveParticipant(updated);
     setParticipant(updated);
     setCurrentPage(updated.currentPage);
-    StorageManager.setCurrentParticipant(updated);
+    SupabaseStorage.setCurrentParticipant(updated);
   };
 
-  const handleGoToRegistration = () => {
+  const handleNextPage = () => {
     setCurrentPage(2);
   };
 
   if (!participant) {
     if (currentPage === 1) {
-      return <Page1Welcome onNext={handleGoToRegistration} />;
+      return <Page1Welcome onNext={handleNextPage} />;
     } else {
       return (
         <Page2Registration
-          onRegister={(data) => {
+          onRegister={async (data) => {
             const newParticipant: Participant = {
-              id: StorageManager.generateId(),
-              sessionId: StorageManager.generateId(),
-              experimentId: experimentCode,
+              id: SupabaseStorage.generateId(),
+              sessionId: SupabaseStorage.generateId(),
+              experimentId: data.experimentCode,
               firstName: data.firstName,
               lastName: data.lastName,
               currentPage: 3,
               consentGiven: data.consent,
               createdAt: new Date().toISOString()
             };
-            StorageManager.saveParticipant(newParticipant);
+            await SupabaseStorage.saveParticipant(newParticipant);
             setParticipant(newParticipant);
             setCurrentPage(3);
-            StorageManager.setCurrentParticipant(newParticipant);
+            SupabaseStorage.setCurrentParticipant(newParticipant);
           }}
         />
       );
     }
   }
 
+  const handleNextPageAfterCurrent = () => {
+    if (participant) {
+      handleUpdateParticipant({ currentPage: participant.currentPage + 1 });
+    }
+  };
+
   switch (participant.currentPage) {
     case 1:
-      return <Page1Welcome onNext={handleGoToRegistration} />;
+      return <Page1Welcome onNext={handleNextPage} />;
     case 2:
       return (
         <Page2Registration
-          onRegister={(data) => {
-            const newParticipant: Participant = {
-              id: StorageManager.generateId(),
-              sessionId: StorageManager.generateId(),
-              experimentId: experimentCode,
+          onRegister={async (data) => {
+            await handleUpdateParticipant({
               firstName: data.firstName,
               lastName: data.lastName,
-              currentPage: 3,
               consentGiven: data.consent,
-              createdAt: new Date().toISOString()
-            };
-            StorageManager.saveParticipant(newParticipant);
-            setParticipant(newParticipant);
-            StorageManager.setCurrentParticipant(newParticipant);
+              currentPage: 3
+            });
           }}
         />
       );
@@ -106,10 +108,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
         <Page4Instructions
           participant={participant}
           onNext={(declaredPrice) => {
-            handleUpdateParticipant({
-              declaredPrice,
-              currentPage: 5
-            });
+            handleUpdateParticipant({ declaredPrice, currentPage: 5 });
           }}
         />
       );

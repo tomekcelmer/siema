@@ -3,7 +3,7 @@ import { Home } from './components/Home';
 import { ParticipantFlow } from './components/ParticipantFlow';
 import { HostDashboard } from './components/HostDashboard';
 import { Recovery } from './components/Recovery';
-import { StorageManager } from './lib/storage';
+import { SupabaseStorage } from './lib/supabaseStorage';
 
 type View = 'home' | 'participant' | 'host' | 'recovery';
 
@@ -24,7 +24,7 @@ function App() {
         setView('recovery');
       }
     } else if (path === '/participant') {
-      const current = StorageManager.getCurrentParticipant();
+      const current = SupabaseStorage.getCurrentParticipant();
       if (current) {
         setView('participant');
       }
@@ -44,7 +44,7 @@ function App() {
   const handleBackToHome = () => {
     setView('home');
     window.history.pushState({}, '', '/');
-    StorageManager.setCurrentParticipant(null);
+    SupabaseStorage.clearCurrentParticipant();
   };
 
   if (view === 'recovery') {
