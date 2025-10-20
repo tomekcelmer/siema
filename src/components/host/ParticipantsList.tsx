@@ -47,7 +47,7 @@ export function ParticipantsList({ experimentId, onStartExperiment, refreshKey }
                   <th className="text-left p-3 text-slate-700 font-semibold">#</th>
                   <th className="text-left p-3 text-slate-700 font-semibold">Imię</th>
                   <th className="text-left p-3 text-slate-700 font-semibold">Nazwisko</th>
-                  <th className="text-left p-3 text-slate-700 font-semibold">ID Sesji</th>
+                  <th className="text-left p-3 text-slate-700 font-semibold">ID Sesji (pełne)</th>
                   <th className="text-left p-3 text-slate-700 font-semibold">Czas Rejestracji</th>
                 </tr>
               </thead>
@@ -57,7 +57,9 @@ export function ParticipantsList({ experimentId, onStartExperiment, refreshKey }
                     <td className="p-3 text-slate-600">{index + 1}</td>
                     <td className="p-3 text-slate-800 font-medium">{p.firstName}</td>
                     <td className="p-3 text-slate-800 font-medium">{p.lastName}</td>
-                    <td className="p-3 text-slate-600 font-mono text-xs">{p.sessionId.slice(0, 8)}...</td>
+                    <td className="p-3 text-slate-600 font-mono text-xs">
+                      <div className="max-w-xs break-all">{p.sessionId}</div>
+                    </td>
                     <td className="p-3 text-slate-600 text-sm">
                       {new Date(p.createdAt).toLocaleTimeString('pl-PL')}
                     </td>

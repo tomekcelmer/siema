@@ -7,19 +7,20 @@ import { ParticipantsList } from './host/ParticipantsList';
 import { ActiveExperiment } from './host/ActiveExperiment';
 
 interface HostDashboardProps {
+  experimentCode: string;
   onBack: () => void;
 }
 
-export function HostDashboard({ onBack }: HostDashboardProps) {
+export function HostDashboard({ experimentCode, onBack }: HostDashboardProps) {
   const [currentExperiment, setCurrentExperiment] = useState<Experiment | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const experiment = StorageManager.getExperiment('current');
+    const experiment = StorageManager.getExperiment(experimentCode);
     if (!experiment) {
       const newExperiment: Experiment = {
-        id: 'current',
-        name: `Eksperyment ${new Date().toLocaleDateString('pl-PL')}`,
+        id: experimentCode,
+        name: `Eksperyment: ${experimentCode}`,
         experimentType: 1,
         status: 'waiting',
         createdAt: new Date().toISOString()
@@ -29,12 +30,12 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
     } else {
       setCurrentExperiment(experiment);
     }
-  }, [refreshKey]);
+  }, [refreshKey, experimentCode]);
 
   const handleStartExperiment = (type: ExperimentType) => {
     if (!currentExperiment) return;
 
-    const participants = StorageManager.getParticipantsByExperiment('current');
+    const participants = StorageManager.getParticipantsByExperiment(experimentCode);
 
     if (participants.length < 2) {
       alert('Potrzeba co najmniej 2 uczestników aby rozpocząć eksperyment');
@@ -44,7 +45,7 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
     PairingManager.assignRolesAndVariants(participants);
 
     setTimeout(() => {
-      PairingManager.createPairs('current', type);
+      PairingManager.createPairs(experimentCode, type);
 
       const updatedExperiment = { ...currentExperiment, status: 'active' as const, experimentType: type };
       StorageManager.saveExperiment(updatedExperiment);
@@ -65,7 +66,7 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
   };
 
   const handleExportResults = () => {
-    const participants = StorageManager.getParticipantsByExperiment('current');
+    const participants = StorageManager.getParticipantsByExperiment(experimentCode);
 
     const csvHeader = 'Imię,Nazwisko,Rola,Wariant,Cena Zadeklarowana,Cena Finalna,Nagroda,Czas Transakcji\n';
     const csvRows = participants.map(p => {
@@ -87,7 +88,7 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
   };
 
   const handleExportChatLogs = () => {
-    const rooms = StorageManager.getChatRoomsByExperiment('current');
+    const rooms = StorageManager.getChatRoomsByExperiment(experimentCode);
     const allMessages = rooms.map(room => {
       const messages = StorageManager.getMessagesByRoom(room.id);
       const seller = StorageManager.getParticipant(room.sellerId);
@@ -171,13 +172,13 @@ export function HostDashboard({ onBack }: HostDashboardProps) {
 
         {currentExperiment.status === 'waiting' ? (
           <ParticipantsList
-            experimentId="current"
+            experimentId={experimentCode}
             onStartExperiment={handleStartExperiment}
             refreshKey={refreshKey}
           />
         ) : (
           <ActiveExperiment
-            experimentId="current"
+            experimentId={experimentCode}
             experimentType={currentExperiment.experimentType}
             refreshKey={refreshKey}
           />

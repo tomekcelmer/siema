@@ -59,7 +59,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
             const newParticipant: Participant = {
               id: StorageManager.generateId(),
               sessionId: StorageManager.generateId(),
-              experimentId: 'current',
+              experimentId: experimentCode,
               firstName: data.firstName,
               lastName: data.lastName,
               currentPage: 3,
@@ -86,7 +86,7 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
             const newParticipant: Participant = {
               id: StorageManager.generateId(),
               sessionId: StorageManager.generateId(),
-              experimentId: 'current',
+              experimentId: experimentCode,
               firstName: data.firstName,
               lastName: data.lastName,
               currentPage: 3,
