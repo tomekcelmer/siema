@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Clock, AlertCircle } from 'lucide-react';
 import { Participant, ChatMessage, ChatRoom } from '../../types';
 import { StorageManager } from '../../lib/storage';
+import { AUTO_MESSAGE, hasAutoMessage } from '../../lib/instructions';
 
 interface Page6ChatProps {
   participant: Participant;
@@ -16,9 +17,10 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(600);
   const [showWarning, setShowWarning] = useState(false);
+  const [autoMessageSent, setAutoMessageSent] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const experiment = StorageManager.getExperiment('current');
+  const experiment = StorageManager.getExperiment(participant.experimentId);
   const isAnonymous = experiment?.experimentType === 1;
 
   useEffect(() => {
@@ -29,6 +31,27 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
 
     const loadedMessages = StorageManager.getMessagesByRoom(participant.pairId);
     setMessages(loadedMessages);
+
+    if (!autoMessageSent && chatRoom && participant.role === 'seller' && participant.variant && hasAutoMessage(participant.variant)) {
+      const existingAutoMsg = loadedMessages.find(m => m.messageText === AUTO_MESSAGE && m.participantId === participant.id);
+
+      if (!existingAutoMsg) {
+        setTimeout(() => {
+          const autoMsg: ChatMessage = {
+            id: StorageManager.generateId(),
+            roomId: participant.pairId!,
+            participantId: participant.id,
+            messageText: AUTO_MESSAGE,
+            messageType: 'chat',
+            createdAt: new Date().toISOString()
+          };
+          StorageManager.saveChatMessage(autoMsg);
+          setAutoMessageSent(true);
+        }, 1000);
+      } else {
+        setAutoMessageSent(true);
+      }
+    }
 
     const messageHandler = (e: Event) => {
       const customEvent = e as CustomEvent<ChatMessage>;
