@@ -1,3 +1,4 @@
+import { getInstructions } from '../../lib/instructions';
 import { useState, useEffect, useRef } from 'react';
 import { Send, Clock, AlertCircle } from 'lucide-react';
 import { Participant, ChatMessage, ChatRoom } from '../../types';
@@ -282,8 +283,8 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
   }
 
   const instructions = participant.role && participant.variant
-    ? require('../../lib/instructions').getInstructions(participant.role, participant.variant)
-    : [];
+  ? getInstructions(participant.role, participant.variant) // Użyj zaimportowanej funkcji
+  : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
