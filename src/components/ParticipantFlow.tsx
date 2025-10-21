@@ -138,13 +138,11 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
         <Page6Chat
           participant={participant}
           onComplete={() => {
-            handleUpdateParticipant({ currentPage: 8 });
+            handleUpdateParticipant({ currentPage: 7 });
           }}
         />
       );
-    case 8:
+    case 7:
       return <Page8Complete participant={participant} onBack={onBack} />;
-    default:
-      return <Page1Welcome onNext={handleNextPage} />;
   }
 }
