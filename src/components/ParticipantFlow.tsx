@@ -138,11 +138,18 @@ export function ParticipantFlow({ onBack }: ParticipantFlowProps) {
         <Page6Chat
           participant={participant}
           onComplete={() => {
-            handleUpdateParticipant({ currentPage: 7 });
+            // CELOWO ZOSTAWIONE PUSTE.
+            // Logika zmiany strony jest już poprawnie obsłużona
+            // wewnątrz Page6Chat.tsx (ustawia currentPage: 8).
+            // Wywołanie handleUpdateParticipant w tym miejscu
+            // powodowało 'race condition' i nadpisywało
+            // wyniki transakcji nieaktualnymi danymi.
           }}
         />
       );
     case 7:
+      return <Page8Complete participant={participant} onBack={onBack} />;
+    case 8:
       return <Page8Complete participant={participant} onBack={onBack} />;
   }
 }
