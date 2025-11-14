@@ -285,18 +285,6 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     );
   }
 
-  // Pobierz wszystkie instrukcje
-  const allInstructions = participant.role && participant.variant
-    ? getInstructions(participant.role, participant.variant)
-    : [];
-
-  // Zdefiniuj linie, których NIE CHCEMY pokazywać w oknie czatu
-  const unwantedLines = [
-    'Zanim przejdziesz do czatu, wpisz cenę, poniżej której nie zamierzasz schodzić:',
-    'Zanim przejdziesz do czatu, wpisz cenę, której nie zamierzasz przekroczyć:',
-    '*Wpisana cena nie jest zobowiązująca i nie wpływa na przebieg negocjacji.'
-  ];
-
 // Pobierz wszystkie instrukcje
   const allInstructions = participant.role && participant.variant
     ? getInstructions(participant.role, participant.variant)
