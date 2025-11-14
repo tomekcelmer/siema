@@ -100,7 +100,7 @@ export function Page4Instructions({ participant, onNext }: Page4InstructionsProp
             type="text"
             value={declaredPrice}
             onChange={handlePriceChange}
-            placeholder="Wpisz zadeklarowaną kwotę (np. 1200)"
+            placeholder="Wpisz zadeklarowaną kwotę (zł)"
             className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors mb-2 placeholder:text-slate-400"
             required
           />
