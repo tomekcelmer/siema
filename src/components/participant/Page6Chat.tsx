@@ -380,7 +380,7 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
                 type="text"
                 value={offerPrice}
                 onChange={(e) => handleOfferPriceChange(e.target.value)}
-                placeholder="Wpisz propozycję cenową (np. 1300)"
+                placeholder="Wpisz propozycję cenową (zł)"
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
               />
               <div className="flex gap-2">
