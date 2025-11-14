@@ -282,9 +282,21 @@ export function Page6Chat({ participant, onComplete }: Page6ChatProps) {
     );
   }
 
-  const instructions = participant.role && participant.variant
-  ? getInstructions(participant.role, participant.variant) // Użyj zaimportowanej funkcji
-  : [];
+  // Pobierz wszystkie instrukcje
+  const allInstructions = participant.role && participant.variant
+    ? getInstructions(participant.role, participant.variant)
+    : [];
+
+  // Zdefiniuj linie, których NIE CHCEMY pokazywać w oknie czatu
+  const unwantedLines = [
+    'Zanim przejdziesz do czatu, wpisz cenę, poniżej której nie zamierzasz schodzić:',
+    'Zanim przejdziesz do czatu, wpisz cenę, której nie zamierzasz przekroczyć:',
+    '*Wpisana cena nie jest zobowiązująca i nie wpływa na przebieg negocjacji.'
+  ];
+
+  // Stwórz nową listę 'instructions', która zawiera tylko te linie,
+  // których nie ma na liście 'unwantedLines'
+  const instructions = allInstructions.filter(line => !unwantedLines.includes(line));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
