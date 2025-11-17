@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loader2, RotateCcw } from 'lucide-react';
 import { Participant } from '../../types';
-import { StorageManager } from '../../lib/storage';
 import { SupabaseStorage } from '../../lib/supabaseStorage';
 
 interface Page3WaitingProps {
@@ -36,16 +35,6 @@ export function Page3Waiting({ participant, onStartOver }: Page3WaitingProps) {
       setIsDeleting(false);
     }
   };
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const updated = StorageManager.getParticipant(participant.id);
-      if (updated && updated.role && updated.variant) {
-        window.location.reload();
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [participant.id]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
