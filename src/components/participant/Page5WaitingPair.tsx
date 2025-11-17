@@ -45,7 +45,6 @@ export function Page5WaitingPair({ participant }: Page5WaitingPairProps) {
         setTimeout(async () => {
           participant.currentPage = 6;
           await SupabaseStorage.saveParticipant(participant);
-          window.location.reload();
         }, 2000);
       }
     };
@@ -60,7 +59,6 @@ export function Page5WaitingPair({ participant }: Page5WaitingPairProps) {
         }
 
         if (updated.currentPage === 6) {
-          window.location.reload();
           return;
         }
       }
